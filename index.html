@@ -42,7 +42,6 @@ td.p{font:800 25px 'Barlow Condensed',sans-serif;color:var(--gold);width:46px}
 .m .t:last-child{justify-content:flex-end}
 .sc{background:#090c22;color:var(--gold);font:800 26px 'Barlow Condensed',sans-serif;letter-spacing:.08em;padding:3px 14px;border-radius:9px;min-width:78px;text-align:center}
 .sc.no{color:#ffc85755}
-.sc.postponed{color:#ffa94d;background:#2a1c0d;font-size:14px;letter-spacing:.06em;padding:6px 12px;font-weight:700}
 /* takımlar */
 .tc{background:var(--s1);border-radius:18px;padding:16px;margin-bottom:12px;border-left:6px solid var(--c)}
 .tt{display:flex;justify-content:space-between;align-items:center}
@@ -105,21 +104,21 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 </nav>
 <script>
 // Google Sheets > Dosya > Paylaş > Web'de yayınla > CSV linkini buraya yapıştır:
-const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vR3oE4xcWzLYqIZJ6TbJIqCs4Q-0cls2gQAPrdjVcD8RGNfhYYVMu4IrYN4q9V_qVd6j5Bl1ZsTUrmP/pub?gid=1140194229&single=true&output=csv";
+const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vR3oE4xcWzLYqIZJ6TbJIqCs4Q-0cls2gQAPrdjVcD8RGNfhYYVMu4IrYN4q9V_qVd6j5Bl1ZsTUrmP/pub?gid=2074515296&single=true&output=csv";
 
 const N={E:'Emir',H:'Halil',Y:'Yusuf',A:'Aras'};
 const COL={Yusuf:'#4da3ff',Halil:'#ff7a7a',Emir:'#ffc857',Aras:'#5fd6a4'};
 const TEAMS=Object.values(N);
 const MATCHES=[];
-"EH,YA|EY,HA|EA,HY|HE,AY|YE,AH|AE,YH|EH,YA|EY,HA|EA,HY|HE,AY|YE,AH|AE,YH".split('|').forEach((d,i)=>d.split(',').forEach(m=>MATCHES.push({d:i+1,h:N[m[0]],a:N[m[1]],s:null,postponed:false})));
+"EH,YA|EY,HA|EA,HY|HE,AY|YE,AH|AE,YH|EH,YA|EY,HA|EA,HY|HE,AY|YE,AH|AE,YH".split('|').forEach((d,i)=>d.split(',').forEach(m=>MATCHES.push({d:i+1,h:N[m[0]],a:N[m[1]],s:null})));
 const dateOf=d=>new Date(2026,10,13+d-1);
 const fmt=d=>d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'});
-const $=id=>document.getElementById(id),low=s=>(s||'').toLocaleLowerCase('tr');
+const $=id=>document.getElementById(id),low=s=>fold(s||'');
 const dot=n=>`<i class="dot" style="background:${COL[n]}"></i>`;
 
 function stats(){
  const t={};TEAMS.forEach(n=>t[n]={n,o:0,g:0,b:0,m:0,gf:0,ga:0,form:[],run:0,best:0});
- MATCHES.forEach(m=>{if(!m.s||m.postponed)return;const[x,y]=m.s;
+ MATCHES.forEach(m=>{if(!m.s)return;const[x,y]=m.s;
   [[m.h,x,y],[m.a,y,x]].forEach(([n,f,a])=>{const s=t[n];s.o++;s.gf+=f;s.ga+=a;
    const r=f>a?'G':f<a?'M':'B';s[r.toLowerCase()]++;s.form.push(r);
    if(r==='G'){s.run++;s.best=Math.max(s.best,s.run)}else s.run=0;});});
@@ -132,7 +131,7 @@ function drawTable(st){
 }
 function drawTeams(st){
  $('teams').innerHTML=st.map((x,i)=>{
-  const nx=MATCHES.find(m=>!m.s&&!m.postponed&&(m.h===x.n||m.a===x.n));
+  const nx=MATCHES.find(m=>!m.s&&(m.h===x.n||m.a===x.n));
   return `<div class="tc" style="--c:${COL[x.n]}"><div class="tt"><div class="tn">${x.n}<small>${i+1}. sırada</small></div><div class="tp">${x.p}<small>puan</small></div></div>
   <div class="g4"><div>${x.o}<small>Maç</small></div><div>${x.g}<small>Galibiyet</small></div><div>${x.b}<small>Beraberlik</small></div><div>${x.m}<small>Mağlubiyet</small></div></div>
   <div class="fm">${x.form.length?x.form.slice(-5).map(r=>`<i class="${r}">${r}</i>`).join(''):'Henüz maç yok'}</div>
@@ -142,17 +141,11 @@ function drawFix(){
  const today=new Date().toDateString();let h='';
  for(let d=1;d<=12;d++){const dt=dateOf(d);
   h+=`<section class="day${dt.toDateString()===today?' today':''}"><div class="dh"><b>${d}. Gün</b><span>${fmt(dt)}</span></div>`+
-  MATCHES.filter(m=>m.d===d).map(m=>{
-   let badge;
-   if(m.postponed) badge='<span class="sc postponed">ERTELENDİ</span>';
-   else if(m.s) badge=`<span class="sc">${m.s[0]} - ${m.s[1]}</span>`;
-   else badge='<span class="sc no">- : -</span>';
-   return `<div class="m"><span class="t">${dot(m.h)}${m.h}</span>${badge}<span class="t">${m.a}${dot(m.a).replace('margin-right:8px','')}</span></div>`;
-  }).join('')+'</section>';}
+  MATCHES.filter(m=>m.d===d).map(m=>`<div class="m"><span class="t">${dot(m.h)}${m.h}</span><span class="sc${m.s?'':' no'}">${m.s?m.s[0]+' - '+m.s[1]:'- : -'}</span><span class="t">${m.a}${dot(m.a).replace('margin-right:8px','')}</span></div>`).join('')+'</section>';}
  $('fix').innerHTML=h;
 }
 function drawRec(st){
- const pl=MATCHES.filter(m=>m.s&&!m.postponed);
+ const pl=MATCHES.filter(m=>m.s);
  const ks=scorers().slice(0,10),mg=Math.max(1,ks.length?ks[0].g:1);
  const gk='<div class="gk"><div class="gkt"><svg viewBox="0 0 24 24"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z"/></svg>En çok gol atanlar</div>'+(ks.length?ks.map((x,i)=>`<div class="gr"><b>${i+1}</b><div><div class="gn">${dot(x.team)}${x.name}<small>${x.team}</small></div><div class="bar"><i style="width:${x.g/mg*100}%;background:${COL[x.team]}"></i></div></div><div class="gv">${x.g}<small>${x.mt.size} maçta</small></div></div>`).join(''):'<p class="nogk">Golü atan futbolcular henüz girilmedi. Sheets\'te F ve G sütunlarına yaz.</p>')+'</div>';
  $('gkp').innerHTML=gk;
@@ -178,17 +171,27 @@ function csv(t){const rows=[];let r=[],c='',q=false;
   else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;r.push(c);rows.push(r);r=[];c=''}
   else c+=ch}
  r.push(c);rows.push(r);return rows.map(r=>r.map(x=>x.trim()));}
-// "Messi 2, Neymar" -> Messi 2 gol, Neymar 1 gol
+// Büyük/küçük harf ve Türkçe karakter farkı yok sayılır (Kökçü = kokcu = KÖKÇÜ)
+function fold(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/\s+/g,' ').trim();}
+const mixed=s=>/[a-zçğıöşü]/.test(s)&&/[A-ZÇĞİÖŞÜ]/.test(s);
+const title=s=>s.trim().split(/\s+/).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+const disp=ns=>{const b=ns.slice().sort((a,c)=>fold(c).length-fold(a).length||(mixed(c)?1:0)-(mixed(a)?1:0))[0];return mixed(b)?b:title(b);};
+// "Messi 2, James Rodriguez, Neymar x3" -> ad soyad ve gol sayısı otomatik ayrılır
 function scorers(){
+ const raw=[];
+ MATCHES.forEach(m=>{if(!m.s||!m.g)return;
+  [[m.g[0],m.h],[m.g[1],m.a]].forEach(([txt,team])=>txt.split(/[,;\/]/).forEach(tok=>{
+   tok=tok.trim();if(!tok)return;
+   const mm=tok.match(/^(.*?)\s*(?:[x×(]\s*)?(\d+)\)?$/i),name=(mm?mm[1]:tok).trim(),n=mm?+mm[2]:1;
+   if(name&&n)raw.push({name,f:fold(name),team,n,k:m.d+team});}));});
+ // tek kelimelik isim (Yamal) tek bir tam adla (Lamine Yamal) eşleşiyorsa aynı kişi sayılır
+ const full=[...new Set(raw.map(r=>r.f).filter(f=>f.includes(' ')))];
+ const canon=f=>{if(f.includes(' '))return f;const c=full.filter(x=>x.split(' ').includes(f));return c.length===1?c[0]:f;};
  const t={};
- MATCHES.forEach(m=>{if(!m.s||m.postponed||!m.g)return;
-  [[m.g[0],m.h],[m.g[1],m.a]].forEach(([txt,team])=>{
-   txt.split(/[,;\/]/).forEach(tok=>{tok=tok.trim();if(!tok)return;
-    const mm=tok.match(/^(.*?)\s*(?:[x×(]\s*)?(\d+)\)?$/i);
-    const name=(mm?mm[1]:tok).trim(),n=mm?+mm[2]:1;if(!name||!n)return;
-    const k=low(name)+'|'+team,o=t[k]||(t[k]={name,team,g:0,mt:new Set()});
-    o.g+=n;o.mt.add(m.d);});});});
- return Object.values(t).sort((a,b)=>b.g-a.g||a.name.localeCompare(b.name,'tr'));
+ raw.forEach(r=>{const k=canon(r.f)+'|'+r.team,o=t[k]||(t[k]={team:r.team,g:0,mt:new Set(),ns:[]});
+  o.g+=r.n;o.mt.add(r.k);o.ns.push(r.name);});
+ return Object.values(t).map(o=>({name:disp(o.ns),team:o.team,g:o.g,mt:o.mt.size}))
+  .sort((a,b)=>b.g-a.g||a.name.localeCompare(b.name,'tr'));
 }
 async function fetchCsv(){
  const u=SHEET_CSV_URL;let err='ağ hatası';
@@ -202,25 +205,11 @@ async function load(){
  const note=$('note');
  if(!SHEET_CSV_URL){note.textContent='Skorlar bağlı değil: index.html içine Google Sheets linkini ekle.';note.hidden=false;return draw();}
  try{
-  const map={},gm={},postMap={};
+  const map={},gm={};
   csv(await fetchCsv()).forEach(c=>{
-   if(!/^\d+$/.test(c[0]))return;
-   const k=c[0]+'|'+low(c[1])+'|'+low(c[2]);
-   const s1=low(c[3]||''),s2=low(c[4]||'');
-   const isPost = s1.includes('ert') || s2.includes('ert') || s1==='e' || s2==='e';
-   if(isPost){
-    postMap[k]=true;
-    return;
-   }
-   if(!c[3]||!c[4]||isNaN(c[3])||isNaN(c[4]))return;
-   map[k]=[+c[3],+c[4]];gm[k]=[c[5]||'',c[6]||''];
-  });
-  MATCHES.forEach(m=>{
-   const k=m.d+'|'+low(m.h)+'|'+low(m.a);
-   m.postponed=!!postMap[k];
-   m.s=map[k]||null;
-   m.g=gm[k]||null;
-  });
+   if(!/^\d+$/.test(c[0])||!c[3]||!c[4]||isNaN(c[3])||isNaN(c[4]))return;
+   const k=c[0]+'|'+low(c[1])+'|'+low(c[2]);map[k]=[+c[3],+c[4]];gm[k]=[c[5]||'',c[6]||''];});
+  MATCHES.forEach(m=>{const k=m.d+'|'+low(m.h)+'|'+low(m.a);m.s=map[k]||null;m.g=gm[k]||null;});
   note.hidden=true;
  }catch(e){note.textContent='Skorlar yüklenemedi ('+(e.message||'bilinmeyen hata')+').';note.hidden=false;}
  draw();
