@@ -71,6 +71,7 @@ td.p{font:800 25px 'Barlow Condensed',sans-serif;color:var(--gold);width:46px}
 .bar{height:6px;border-radius:3px;background:var(--s2);margin-top:4px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:3px;min-width:3px}
 .gn small{font:600 13px Barlow,sans-serif;color:var(--mu);margin-left:8px}
+.more{width:100%;margin-top:16px;padding:12px;background:var(--s2);border:1.5px solid var(--line);border-radius:12px;font-weight:600;font-size:15px;cursor:pointer}
 .nogk{color:var(--mu);margin:8px 0 0;font-size:14px}
 .gv{font:800 32px/1 'Barlow Condensed',sans-serif;text-align:right}
 .gv small{display:block;font:600 12px Barlow,sans-serif;color:var(--mu)}
@@ -104,6 +105,14 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 </nav>
 <script>
 // Google Sheets > Dosya > Paylaş > Web'de yayınla > CSV linkini buraya yapıştır:
+// Sheets'e soyadı yazman yeterli; burada tanımlıysa tam adıyla gösterilir.
+// Yeni oyuncu eklemek için: 'soyadı (küçük harf, aksansız)':'Tam Adı'
+const FULL_NAMES={
+ 'alvarez':'Julian Alvarez','saka':'Bukayo Saka','ronaldo':'Cristiano Ronaldo','yamal':'Lamine Yamal','forlan':'Diego Forlán',
+ 'burak':'Burak Yılmaz','aguero':'Sergio Agüero','neymar':'Neymar Jr','messi':'Lionel Messi','salah':'Mohamed Salah',
+ 'haaland':'Erling Haaland','suarez':'Luis Suárez','osimhen':'Victor Osimhen','beckham':'David Beckham','orkun':'Orkun Kökçü',
+ 'madueke':'Noni Madueke','mbappe':'Kylian Mbappé','romero':'Cristian Romero','milinkovic savic':'Sergej Milinković-Savić'
+};
 const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vR3oE4xcWzLYqIZJ6TbJIqCs4Q-0cls2gQAPrdjVcD8RGNfhYYVMu4IrYN4q9V_qVd6j5Bl1ZsTUrmP/pub?gid=2074515296&single=true&output=csv";
 
 const N={E:'Emir',H:'Halil',Y:'Yusuf',A:'Aras'};
@@ -146,9 +155,10 @@ function drawFix(){
 }
 function drawRec(st){
  const pl=MATCHES.filter(m=>m.s);
- const ks=scorers().slice(0,10),mg=Math.max(1,ks.length?ks[0].g:1);
- const gk='<div class="gk"><div class="gkt"><svg viewBox="0 0 24 24"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z"/></svg>En çok gol atanlar</div>'+(ks.length?ks.map((x,i)=>`<div class="gr"><b>${i+1}</b><div><div class="gn">${dot(x.team)}${x.name}<small>${x.team}</small></div><div class="bar"><i style="width:${x.g/mg*100}%;background:${COL[x.team]}"></i></div></div><div class="gv">${x.g}<small>${x.mt.size} maçta</small></div></div>`).join(''):'<p class="nogk">Golü atan futbolcular henüz girilmedi. Sheets\'te F ve G sütunlarına yaz.</p>')+'</div>';
+ const all=scorers(),ks=gkAll?all:all.slice(0,10),mg=Math.max(1,all.length?all[0].g:1);
+ const gk='<div class="gk"><div class="gkt"><svg viewBox="0 0 24 24"><path d="M3 18h18l-1.5-10-4.5 4-3-7-3 7-4.5-4z"/></svg>En çok gol atanlar</div>'+(ks.length?ks.map((x,i)=>`<div class="gr"><b>${i+1}</b><div><div class="gn">${dot(x.team)}${x.name}<small>${x.team}</small></div><div class="bar"><i style="width:${x.g/mg*100}%;background:${COL[x.team]}"></i></div></div><div class="gv">${x.g}<small>${x.mt.size} maçta</small></div></div>`).join(''):'<p class="nogk">Golü atan futbolcular henüz girilmedi. Sheets\'te F ve G sütunlarına yaz.</p>')+(all.length>10?`<button class="more" id="gkMore">${gkAll?'Daha az göster':'Daha fazla göster ('+all.length+' oyuncu)'}</button>`:'')+'</div>';
  $('gkp').innerHTML=gk;
+ {const mb=$('gkMore');if(mb)mb.onclick=()=>{gkAll=!gkAll;drawRec(st);};}
  if(!pl.length){$('rec').innerHTML='<p class="empty">İlk maç oynanınca rekorlar burada görünecek.</p>';return;}
  const mx=(arr,f)=>arr.reduce((a,b)=>f(b)>f(a)?b:a);
  const ga=mx(st.filter(s=>s.o),s=>-s.ga),bs=mx(st,s=>s.best);
@@ -159,7 +169,7 @@ function drawRec(st){
   c('En büyük fark',big.s[0]+'-'+big.s[1],mt(big))+c('En gollü maç',top.s[0]+'-'+top.s[1],mt(top))+
   c('En uzun galibiyet serisi',bs.best,bs.best?bs.n:'Henüz yok');
 }
-let first=true;
+let first=true,gkAll=false;
 function draw(){const st=stats();drawTable(st);drawTeams(st);drawFix();drawRec(st);
  if(first){first=false;const t=document.querySelector('.today');if(t)$('pf').scrollTop=t.offsetTop-70;}}
 
@@ -183,7 +193,7 @@ function scorers(){
   [[m.g[0],m.h],[m.g[1],m.a]].forEach(([txt,team])=>txt.split(/[,;\/]/).forEach(tok=>{
    tok=tok.trim();if(!tok)return;
    const mm=tok.match(/^(.*?)\s*(?:[x×(]\s*)?(\d+)\)?$/i),name=(mm?mm[1]:tok).trim(),n=mm?+mm[2]:1;
-   if(name&&n)raw.push({name,f:fold(name),team,n,k:m.d+team});}));});
+   if(!name||!n)return;const nm=FULL_NAMES[fold(name)]||name;raw.push({name:nm,f:fold(nm),team,n,k:m.d+team});}));});
  // tek kelimelik isim (Yamal) tek bir tam adla (Lamine Yamal) eşleşiyorsa aynı kişi sayılır
  const full=[...new Set(raw.map(r=>r.f).filter(f=>f.includes(' ')))];
  const canon=f=>{if(f.includes(' '))return f;const c=full.filter(x=>x.split(' ').includes(f));return c.length===1?c[0]:f;};
